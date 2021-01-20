@@ -1,24 +1,106 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import List from "./components/List";
+import Alert from "./components/Alert";
+
+// Initiate the list from local storage
+const getLocalStorage = () => {
+  let listuch = localStorage.getItem("lists");
+  if (listuch) {
+    return (listuch = JSON.parse(listuch));
+  } else {
+    return [];
+  }
+};
 
 function App() {
+  const [name, setName] = useState("");
+  const [list, setList] = useState(getLocalStorage());
+  const [isEditing, setIsEditing] = useState(false);
+  const [editID, setEditID] = useState(null);
+  const [alert, setAlert] = useState({
+    show: false,
+    msg: " ",
+    type: "",
+  });
+
+  const handleSubmit = (e) => {
+    if (!name) {
+      showAlert(true, "danger", "please enter value");
+    } else if (name && isEditing) {
+      setList(
+        list.map((item) => {
+          if (item.id === editID) {
+            return { ...item, title: name };
+          }
+          return item;
+        })
+      );
+      setName("");
+      setEditID("");
+      setIsEditing(false);
+      showAlert(true, "success", "Item is edited");
+    } else {
+      showAlert(true, "success", "item added to the list");
+      const newItem = { id: new Date().getTime().toString(), title: name };
+      setList([...list, newItem]);
+      setName("");
+    }
+
+    e.preventDefault();
+  };
+
+  const showAlert = (show = false, type = "", msg = "") => {
+    setAlert({ show, type, msg });
+  };
+
+  const clearList = () => {
+    showAlert(true, "danger", "empty list");
+    setList([]);
+  };
+
+  const removeItem = (id) => {
+    showAlert(true, "danger", "Item removed");
+    setList(list.filter((item) => item.id !== id));
+  };
+
+  const editItem = (id) => {
+    const specificItem = list.find((item) => item.id === id);
+    setIsEditing(true);
+    setEditID(id);
+    setName(specificItem.title);
+  };
+  useEffect(() => {
+    localStorage.setItem("lists", JSON.stringify(list));
+  }, [list]);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <section className="section-center">
+      <form className="grocery-form" onSubmit={handleSubmit}>
+        {alert.show && <Alert {...alert} removeAlert={showAlert} list={list} />}
+        <h3>grocery List</h3>
+        <div className="form-control">
+          <input
+            type="text"
+            className="grocery"
+            placeholder="Eg.eggs"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <button type="submit" className="submit-btn">
+            {isEditing ? "edit" : "submit"}
+          </button>
+        </div>
+      </form>
+      {/* show the link only if there is item in there */}
+      {list.length > 0 && (
+        <div className="grocery-container">
+          <List items={list} removeItem={removeItem} editItem={editItem} />
+          <button className="clear-btn" onClick={clearList}>
+            clear items
+          </button>
+        </div>
+      )}
+    </section>
   );
 }
 
